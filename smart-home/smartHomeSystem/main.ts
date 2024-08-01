@@ -1,6 +1,20 @@
 import { SmartHomeHub } from "./SmartHomeHub";
 import readline from "readline";
 
+// Define device types
+interface Device {
+    id: number;
+    type: string;
+}
+
+interface Thermostat extends Device {
+    type: 'thermostat';
+    temp: number;
+}
+
+// Union type for devices
+type DeviceType = Device | Thermostat;
+
 // Initialize readline interface
 const rl = readline.createInterface({
     input: process.stdin,
@@ -9,17 +23,30 @@ const rl = readline.createInterface({
 
 const hub = new SmartHomeHub();
 
-function initializeDevices() {
-    rl.question('Enter device details as JSON (e.g., [{"id":1,"type":"light"},{"id":2,"type":"thermostat","temp":70},{"id":3,"type":"door lock"}]): ', (devices) => {
-        try {
-            const devicesArray = JSON.parse(devices);
-            hub.initializeDevices(devicesArray);
+function promptDeviceDetails(devices: DeviceType[] = []) {
+    rl.question('Enter device ID (or type "done" to finish): ', (id) => {
+        if (id.toLowerCase() === 'done') {
+            // All devices have been entered
+            hub.initializeDevices(devices);
             console.log('Devices initialized successfully.');
             addObserver();
-        } catch (err) {
-            console.error('Invalid JSON. Please try again.');
-            initializeDevices();
+            return;
         }
+
+        rl.question('Enter device type (e.g., "light", "thermostat", "door lock"): ', (type) => {
+            const device: DeviceType = { id: parseInt(id), type };
+
+            if (type === 'thermostat') {
+                rl.question('Enter thermostat temperature: ', (temp) => {
+                    (device as Thermostat).temp = parseInt(temp);
+                    devices.push(device);
+                    promptDeviceDetails(devices);
+                });
+            } else {
+                devices.push(device);
+                promptDeviceDetails(devices);
+            }
+        });
     });
 }
 
@@ -78,4 +105,4 @@ function showMenu() {
     });
 }
 
-initializeDevices();
+promptDeviceDetails();
